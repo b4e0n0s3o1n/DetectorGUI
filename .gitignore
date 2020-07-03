@@ -2,3 +2,6 @@ __pycache__/
 utils/__pycache__/
 .vscode/
 images/
+temp_test.py
+test_load_uiclass.py
+test_load_uifile.py
