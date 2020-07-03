@@ -33,18 +33,16 @@ class MainWindow(QMainWindow):
         # Create QLabel for showing and drawing image.
         self.img = QPixmap()
         self.canvas = Canvas(parent=self)
-        # self.canvas.setSizePolicy(QSizePolicy.Expanding, 
-        #     QSizePolicy.Expanding)
 
-        # Create button to load image
+        # Create button
         self.loadImage_btn = QPushButton('Load image')
         self.loadImage_btn.clicked.connect(self.loadImageSlot)
-
         self.zoominImage_btn = QPushButton('Zoom in')
-        self.zoominImage_btn.clicked.connect(self.zoominImageSlot)
+        self.zoominImage_btn.clicked.connect(self.zoomInImageSlot)
         self.zoomoutImage_btn = QPushButton('Zoom out')
-        self.zoomoutImage_btn.clicked.connect(self.zoomoutImageSlot)
+        self.zoomoutImage_btn.clicked.connect(self.zoomOutImageSlot)
 
+        # Create scroll area
         scroll = QScrollArea()
         scroll.setWidget(self.canvas)
         scroll.setWidgetResizable(True)
@@ -52,18 +50,24 @@ class MainWindow(QMainWindow):
 
         # Set layout
         layout = QVBoxLayout()
-        # layout.addWidget(self.canvas)
         layout.addWidget(self.scrollArea)
-        # layout.addWidget(self.scrollBars)
         layout.addWidget(self.loadImage_btn)
         layout.addWidget(self.zoominImage_btn)
         layout.addWidget(self.zoomoutImage_btn)
 
+        # Create central widget of QMainWindow
         windowContainer = QWidget()
         windowContainer.setLayout(layout)
         self.setCentralWidget(windowContainer)
 
-    def zoominImageSlot(self):
+        # Set shortcuts
+        QShortcut(QKeySequence.ZoomIn, self, self.zoomInImageSlot)
+        QShortcut(QKeySequence.ZoomOut, self, self.zoomOutImageSlot)
+
+    def test(self):
+        print('test')
+
+    def zoomInImageSlot(self):
         """Slot of zooming in image."""
         value = self.canvas.scale
         value += 0.1
@@ -73,7 +77,7 @@ class MainWindow(QMainWindow):
         canvas_position = self.canvas.geometry()
         print('Zoom in... Canvas size: {}'.format(canvas_position))
 
-    def zoomoutImageSlot(self):
+    def zoomOutImageSlot(self):
         """Slot of zooming out image."""
         value = self.canvas.scale
         value -= 0.1
@@ -85,7 +89,7 @@ class MainWindow(QMainWindow):
     
     # TODO: MainWindow resize event
     def resizeEvent(self, event):
-        """MainWindow resize event."""
+        """QMainWindow event: MainWindow resize event."""
         # self.canvas.setMinimumSize(self.scrollArea.width(), self.scrollArea.height())
 
     def loadImageSlot(self):

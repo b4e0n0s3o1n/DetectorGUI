@@ -32,7 +32,7 @@ class Canvas(QWidget):
         self.repaint()
 
     def sizeHint(self):
-        """Along with a call to adjustSize() are required for the scroll area"""
+        """QWidget event: Along with a call to adjustSize() are required for the scroll area"""
         return self.minimumSizeHint()
 
     def minimumSizeHint(self):
@@ -42,7 +42,7 @@ class Canvas(QWidget):
         return super(Canvas, self).minimumSizeHint()
 
     def paintEvent(self, event):
-        """Paint event of painting image on QWidget"""
+        """QWidget event: Paint event of painting image on QWidget"""
         if not self.pixmap:
             return super(Canvas, self).paintEvent(event)
 
@@ -75,13 +75,14 @@ class Canvas(QWidget):
 
     def zoom(self, value):
         """Zoom scale by value"""
-        self.scale = value
-        print('Current scale: {}'.format(self.scale))
-        self.repaint()
+        if (value >= 0.01) and (value <= 5.0):
+            self.scale = value
+            print('Current scale: {}'.format(self.scale))
+            self.repaint()
 
     # TODO: using wheel to zoom
     def wheelEvent(self, ev):
-        """Scroll wheel event of zooming in or out"""
+        """QWidget event: Scroll wheel event of zooming in or out"""
         delta = ev.angleDelta()
         h_delta = delta.x()
         v_delta = delta.y()
@@ -91,7 +92,18 @@ class Canvas(QWidget):
         print('mods: {}'.format(mods))
 
         if Qt.ControlModifier == mods and v_delta:
-            print('Ctrl + {}'.format(v_delta))
+            if v_delta > 0:
+                print('zoom in')
+                value = self.scale
+                value += 0.1
+                self.zoom(value)
+                self.adjustSize()
+            else:
+                print('zoom out')
+                value = self.scale
+                value -= 0.1
+                self.zoom(value)
+                self.adjustSize()
 
         ev.accept()
 
