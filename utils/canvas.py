@@ -5,6 +5,10 @@ from PySide2.QtGui import *
 from PySide2.QtCore import *
 from PySide2.QtWidgets import *
 
+# Cursor icon
+CURSOR_DEFAULT = Qt.ArrowCursor
+CURSOR_DRAW = Qt.CrossCursor 
+
 class Canvas(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -12,6 +16,14 @@ class Canvas(QWidget):
         self.pixmap = QPixmap()
         self._painter = QPainter()
         self.scale = 1.0
+
+        # Set widget options.
+        self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.WheelFocus)
+
+        # Set flag
+        self._cursor = CURSOR_DEFAULT
+        self.isDrawing = False
 
     def loadPixmap(self, pixmap):
         """Paint image on QWidget."""
@@ -106,6 +118,37 @@ class Canvas(QWidget):
                 self.adjustSize()
 
         ev.accept()
+
+    # TODO: mouse event
+    def mouseMoveEvent(self, ev):
+        print('Move')
+
+    def mousePressEvent(self, ev):
+        print('Press')
+        if self.isDrawing:
+            self.overrideCursor(CURSOR_DRAW)
+
+    def mouseReleaseEvent(self, ev):
+        print('Release')
+
+    def overrideCursor(self, cursor):
+        """QWidget event: Change cursor icon."""
+        self._cursor = cursor
+        if self.currentCursor() is None:
+            QApplication.setOverrideCursor(cursor)
+        else:
+            QApplication.changeOverrideCursor(cursor)
+
+    def currentCursor(self):
+        """Determine whether the current cursor has been changed."""
+        cursor = QApplication.overrideCursor()
+        if cursor is not None:
+            cursor = cursor.shape()
+        return cursor
+
+    def restoreCursor(self):
+        """Restore cursor icon."""
+        QApplication.restoreOverrideCursor()
 
 if __name__ == "__main__":
     app = QApplication([])
