@@ -122,14 +122,23 @@ class Canvas(QWidget):
     # TODO: mouse event
     def mouseMoveEvent(self, ev):
         print('Move')
-
-    def mousePressEvent(self, ev):
-        print('Press')
         if self.isDrawing:
             self.overrideCursor(CURSOR_DRAW)
 
+    def mousePressEvent(self, ev):
+        print('Press')
+
     def mouseReleaseEvent(self, ev):
         print('Release')
+
+    def enterEvent(self, ev):
+        """QWidget event: When cursor enters QWidget."""
+        self.overrideCursor(self._cursor)
+
+    def leaveEvent(self, ev):
+        """QWidget event: When cursor leaves QWidget."""
+        # Restore to default cursor when leaves QWidget.
+        self.restoreCursor()
 
     def overrideCursor(self, cursor):
         """QWidget event: Change cursor icon."""
