@@ -54,9 +54,9 @@ class MainWindow(QMainWindow):
         # Set shortcuts
         QShortcut(QKeySequence.ZoomIn, self, self.zoomInImageSlot)
         QShortcut(QKeySequence.ZoomOut, self, self.zoomOutImageSlot)
-        QShortcut(QKeySequence('w'), self, self.test)
+        QShortcut(QKeySequence('w'), self, self.onDrawing)
 
-    def test(self):
+    def onDrawing(self):
         print('Drawing mode...')
         self.canvas.isDrawing = True
 
