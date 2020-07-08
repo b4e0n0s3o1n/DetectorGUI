@@ -2,6 +2,7 @@ __pycache__/
 utils/__pycache__/
 .vscode/
 images/
+demo.py
 QtImageViewer.py
 test.py
 temp_test.py
