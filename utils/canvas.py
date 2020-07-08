@@ -16,6 +16,8 @@ class Canvas(QWidget):
         self.pixmap = QPixmap()
         self._painter = QPainter()
         self.scale = 1.0
+        self.firstPos = None
+        self.currentPos = None
 
         # Set widget options.
         self.setMouseTracking(True)
@@ -68,11 +70,27 @@ class Canvas(QWidget):
         p.translate(self.offsetToCenter())
         p.drawPixmap(0, 0, self.pixmap)
 
+        # TODO: Drawing rect
+        if self.isDrawing and self.firstPos and self.currentPos:
+            print('drawing rect...')
+            leftTop = self.firstPos
+            rightBottom = self.currentPos
+            rectWidth = rightBottom.x() - leftTop.x()
+            rectHeight = rightBottom.y() - leftTop.y()
+            p.setPen(QColor(0, 255, 0))
+            brush = QBrush(Qt.BDiagPattern)
+            p.setBrush(brush)
+            p.drawRect(leftTop.x(), leftTop.y(), rectWidth, rectHeight)
+
         self.setAutoFillBackground(True)
         pal = self.palette()
         pal.setColor(self.backgroundRole(), QColor(226, 240, 217, 255))
         self.setPalette(pal)
         p.end()
+
+    def outOfPixmap(self, p):
+        w, h = self.pixmap.width(), self.pixmap.height()
+        return not (0 <= p.x() <= w and 0 <= p.y() <= h)
 
     # TODO: When using wheel to zoom, need to calculate the zoom point
     def offsetToCenter(self):
@@ -91,6 +109,10 @@ class Canvas(QWidget):
             self.scale = value
             print('Current scale: {}'.format(self.scale))
             self.repaint()
+
+    def transformPos(self, point):
+        """Convert from widget-logical coordinates to painter-logical coordinates."""
+        return point / self.scale - self.offsetToCenter().toPoint()
 
     # TODO: using wheel to zoom
     def wheelEvent(self, ev):
@@ -116,20 +138,47 @@ class Canvas(QWidget):
                 value -= 0.1
                 self.zoom(value)
                 self.adjustSize()
-
         ev.accept()
 
     # TODO: mouse event
     def mouseMoveEvent(self, ev):
-        print('Move')
         if self.isDrawing:
             self.overrideCursor(CURSOR_DRAW)
+            if self.firstPos:
+                pos = self.transformPos(ev.pos())
+                if self.outOfPixmap(pos):
+                    size = self.pixmap.size()
+                    clippedX = min(max(1, pos.x()), size.width())
+                    clippedY = min(max(1, pos.y()), size.height())
+                    pos = QPoint(clippedX, clippedY)
+                print('Mouse press: {}'.format(pos))
+
+                self.currentPos = pos
+                self.repaint()
 
     def mousePressEvent(self, ev):
-        print('Press')
+        pos = self.transformPos(ev.pos())
+
+        # Adjust position when coordinate is out of range(image.size).
+        if self.outOfPixmap(pos):
+            size = self.pixmap.size()
+            clippedX = min(max(0, pos.x()), size.width())
+            clippedY = min(max(0, pos.y()), size.height())
+            pos = QPoint(clippedX, clippedY)
+        print('Mouse press: {}'.format(pos))
+        
+        if ev.button() == Qt.LeftButton:
+            # Press left mouse button.
+            if self.isDrawing:
+                self.firstPos = pos
 
     def mouseReleaseEvent(self, ev):
         print('Release')
+        # Reset flags.
+        self.isDrawing = False
+        self.firstPos = None
+        self.currentPos = None
+        self.restoreCursor()
 
     def enterEvent(self, ev):
         """QWidget event: When cursor enters QWidget."""
