@@ -5,6 +5,8 @@ from PySide2.QtGui import *
 from PySide2.QtCore import *
 from PySide2.QtWidgets import *
 
+from utils.shape import Shape
+
 # Cursor icon
 CURSOR_DEFAULT = Qt.ArrowCursor
 CURSOR_DRAW = Qt.CrossCursor 
@@ -16,8 +18,8 @@ class Canvas(QWidget):
         self.pixmap = QPixmap()
         self._painter = QPainter()
         self.scale = 1.0
-        self.firstPos = None
-        self.currentPos = None
+        self.shapes = []            # Create list to save object: Shape.
+        self.currentShape = None    # Current selected shape.
 
         # Set widget options.
         self.setMouseTracking(True)
@@ -70,17 +72,23 @@ class Canvas(QWidget):
         p.translate(self.offsetToCenter())
         p.drawPixmap(0, 0, self.pixmap)
 
-        # TODO: Drawing rect
-        if self.isDrawing and self.firstPos and self.currentPos:
-            print('drawing rect...')
-            leftTop = self.firstPos
-            rightBottom = self.currentPos
-            rectWidth = rightBottom.x() - leftTop.x()
-            rectHeight = rightBottom.y() - leftTop.y()
-            p.setPen(QColor(0, 255, 0))
-            brush = QBrush(Qt.BDiagPattern)
-            p.setBrush(brush)
-            p.drawRect(leftTop.x(), leftTop.y(), rectWidth, rectHeight)
+        # TODO: Draw rect
+        for shape in self.shapes:
+            if shape.endPos:
+                shape.paintRect(p)
+
+        # TODO: Drawing rect when mouse is moving.
+        if self.isDrawing and self.currentShape:
+            if self.currentShape.endPos:
+                print('drawing rect...')
+                leftTop = self.currentShape.firstPos
+                rightBottom = self.currentShape.endPos
+                rectWidth = rightBottom.x() - leftTop.x()
+                rectHeight = rightBottom.y() - leftTop.y()
+                p.setPen(QColor(255, 0, 0))
+                brush = QBrush(Qt.BDiagPattern)
+                p.setBrush(brush)
+                p.drawRect(leftTop.x(), leftTop.y(), rectWidth, rectHeight)
 
         self.setAutoFillBackground(True)
         pal = self.palette()
@@ -142,21 +150,24 @@ class Canvas(QWidget):
 
     # TODO: mouse event
     def mouseMoveEvent(self, ev):
+        """QWidget event: Mouse move evnet"""
         if self.isDrawing:
             self.overrideCursor(CURSOR_DRAW)
-            if self.firstPos:
+            if self.currentShape:
                 pos = self.transformPos(ev.pos())
                 if self.outOfPixmap(pos):
                     size = self.pixmap.size()
                     clippedX = min(max(1, pos.x()), size.width())
                     clippedY = min(max(1, pos.y()), size.height())
                     pos = QPoint(clippedX, clippedY)
-                print('Mouse press: {}'.format(pos))
-
-                self.currentPos = pos
-                self.repaint()
+                else:
+                    # TODO: Attract line and point.
+                    a = 0
+                self.currentShape.endPos = pos
+            self.repaint()
 
     def mousePressEvent(self, ev):
+        """QWidget event: Mouse press evnet"""
         pos = self.transformPos(ev.pos())
 
         # Adjust position when coordinate is out of range(image.size).
@@ -168,17 +179,21 @@ class Canvas(QWidget):
         print('Mouse press: {}'.format(pos))
         
         if ev.button() == Qt.LeftButton:
-            # Press left mouse button.
             if self.isDrawing:
-                self.firstPos = pos
+                self.currentShape = Shape()     # Create Shape to save rect info.
+                self.currentShape.firstPos = pos
 
     def mouseReleaseEvent(self, ev):
+        """QWidget event: Mouse release evnet"""
         print('Release')
-        # Reset flags.
-        self.isDrawing = False
-        self.firstPos = None
-        self.currentPos = None
-        self.restoreCursor()
+        if ev.button() == Qt.LeftButton:
+            if self.isDrawing:
+                # Reset flags.
+                self.shapes.append(self.currentShape)   # Append to shape list.
+                self.isDrawing = False
+                self.currentShape = None
+                self.restoreCursor()
+                self.update()
 
     def enterEvent(self, ev):
         """QWidget event: When cursor enters QWidget."""
