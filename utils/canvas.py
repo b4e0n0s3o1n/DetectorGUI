@@ -1,5 +1,5 @@
-# Canvas for showing image and drawing ROIs
-# TODO: uncomplete
+# Canvas for showing image and drawing ROIs.
+# Uncomplete
 
 from PySide2.QtGui import *
 from PySide2.QtCore import *
@@ -10,6 +10,8 @@ from utils.shape import Shape
 # Cursor icon
 CURSOR_DEFAULT = Qt.ArrowCursor
 CURSOR_DRAW = Qt.CrossCursor 
+CURSOR_GRAB = Qt.OpenHandCursor
+CURSOR_MOVE = Qt.ClosedHandCursor
 
 class Canvas(QWidget):
     def __init__(self, parent=None):
@@ -20,6 +22,8 @@ class Canvas(QWidget):
         self.scale = 1.0
         self.shapes = []            # Create list to save object: Shape.
         self.currentShape = None    # Current selected shape.
+        self.selectedShape = None   # Select shape if mouse left button click.
+        self.prevPoint = QPointF()  # Save first point when mouse click on the shape.
 
         # Set widget options.
         self.setMouseTracking(True)
@@ -44,6 +48,10 @@ class Canvas(QWidget):
         img_aspect_ratio = img_width / img_height
 
         self.scale = ori_width / img_width if img_aspect_ratio >= ori_aspect_ratio else ori_height / img_height
+
+        # Reset scale if scale if out of range.
+        self.scale = 0.01 if self.scale < 0.01 else self.scale
+        self.scale = 5.0 if self.scale > 5.0 else self.scale
 
         self.repaint()
 
@@ -72,12 +80,12 @@ class Canvas(QWidget):
         p.translate(self.offsetToCenter())
         p.drawPixmap(0, 0, self.pixmap)
 
-        # TODO: Draw rect
+        # Draw rect
         for shape in self.shapes:
             if shape.endPos:
                 shape.paintRect(p)
 
-        # TODO: Drawing rect when mouse is moving.
+        # Drawing rect when mouse is moving.
         if self.isDrawing and self.currentShape:
             if self.currentShape.endPos:
                 print('drawing rect...')
@@ -117,12 +125,13 @@ class Canvas(QWidget):
             self.scale = value
             print('Current scale: {}'.format(self.scale))
             self.repaint()
+        else:
+            print('Scale ({}) is out of range.'.format(self.scale))
 
     def transformPos(self, point):
         """Convert from widget-logical coordinates to painter-logical coordinates."""
         return point / self.scale - self.offsetToCenter().toPoint()
 
-    # TODO: using wheel to zoom
     def wheelEvent(self, ev):
         """QWidget event: Scroll wheel event of zooming in or out"""
         delta = ev.angleDelta()
@@ -132,6 +141,7 @@ class Canvas(QWidget):
         print('h_delta: {}'.format(h_delta))
         print('v_delta: {}'.format(v_delta))
         print('mods: {}'.format(mods))
+        print('Scale: {}'.format(self.scale))
 
         if Qt.ControlModifier == mods and v_delta:
             if v_delta > 0:
@@ -148,13 +158,14 @@ class Canvas(QWidget):
                 self.adjustSize()
         ev.accept()
 
-    # TODO: mouse event
     def mouseMoveEvent(self, ev):
         """QWidget event: Mouse move evnet"""
+        pos = self.transformPos(ev.pos())
+        print('Current pos: {}'.format(pos))
+
         if self.isDrawing:
             self.overrideCursor(CURSOR_DRAW)
             if self.currentShape:
-                pos = self.transformPos(ev.pos())
                 if self.outOfPixmap(pos):
                     size = self.pixmap.size()
                     clippedX = min(max(1, pos.x()), size.width())
@@ -165,6 +176,23 @@ class Canvas(QWidget):
                     a = 0
                 self.currentShape.endPos = pos
             self.repaint()
+            return
+
+        if Qt.LeftButton & ev.buttons():
+            # TODO: Move rectangle.
+            print('moving...')
+            self.overrideCursor(CURSOR_MOVE)
+            self.moveShape(self.selectShape, pos)
+            return
+
+        # Change cursor icon when moving on ROI.
+        for shape in reversed([s for s in self.shapes]):
+            if shape.isInShape(pos):
+                self.overrideCursor(CURSOR_GRAB)
+                self.update()
+                break
+        else:
+            self.overrideCursor(CURSOR_DEFAULT)
 
     def mousePressEvent(self, ev):
         """QWidget event: Mouse press evnet"""
@@ -182,12 +210,28 @@ class Canvas(QWidget):
             if self.isDrawing:
                 self.currentShape = Shape()     # Create Shape to save rect info.
                 self.currentShape.firstPos = pos
+            else:
+                # TODO: Select shape
+                print('Select shape...')
+                self.selectShapePoint(pos)
+                self.prevPoint = pos        # Save point when wanna move.
+                self.repaint()
 
     def mouseReleaseEvent(self, ev):
         """QWidget event: Mouse release evnet"""
         print('Release')
-        if ev.button() == Qt.LeftButton:
+        if ev.button() == Qt.LeftButton and self.selectedShape:
+            self.overrideCursor(CURSOR_GRAB)
+        elif ev.button() == Qt.LeftButton:
             if self.isDrawing:
+                # Adjust rect point if self.firstPos isn's leftTop etc.
+                minX = min(self.currentShape.firstPos.x(), self.currentShape.endPos.x())
+                maxX = max(self.currentShape.firstPos.x(), self.currentShape.endPos.x())
+                minY = min(self.currentShape.firstPos.y(), self.currentShape.endPos.y())
+                maxY = max(self.currentShape.firstPos.y(), self.currentShape.endPos.y())
+                self.currentShape.firstPos = QPointF(minX, minY)
+                self.currentShape.endPos = QPointF(maxX, maxY)
+
                 # Reset flags.
                 self.shapes.append(self.currentShape)   # Append to shape list.
                 self.isDrawing = False
@@ -222,6 +266,39 @@ class Canvas(QWidget):
     def restoreCursor(self):
         """Restore cursor icon."""
         QApplication.restoreOverrideCursor()
+
+    def selectShapePoint(self, point):
+        """Select the first shape created which contains this point."""
+        for shape in reversed(self.shapes):
+            if shape.isInShape(point):
+                self.selectShape(shape)
+                return
+
+    def selectShape(self, shape):
+        # shape.selected = True
+        self.selectedShape = shape
+        self.update()
+
+    def moveShape(self, shape, point):
+        # TODO: Move rectangle.
+        # FIXME: limit firstPos/endPos range when moving out of range.
+        width = self.selectedShape.endPos.x() - self.selectedShape.firstPos.x()
+        height = self.selectedShape.endPos.y() - self.selectedShape.firstPos.y()
+        adjustedFirstPosX = point.x() - width / 2
+        adjustedFirstPosy = point.y() - height / 2
+        adjustedEndPosX = point.x() + width / 2
+        adjustedEndPosy = point.y() + width / 2
+
+        size = self.pixmap.size()
+        adjustedFirstPosX = max(min(size.width(), adjustedFirstPosX), 0)
+        adjustedFirstPosy = max(min(size.height(), adjustedFirstPosy), 0)
+        adjustedEndPosX = max(min(size.width(), adjustedEndPosX), 0)
+        adjustedEndPosy = max(min(size.height(), adjustedEndPosy), 0)
+
+        self.selectedShape.firstPos = QPoint(adjustedFirstPosX, adjustedFirstPosy)
+        self.selectedShape.endPos = QPoint(adjustedEndPosX, adjustedEndPosy)
+
+        self.repaint()
 
 if __name__ == "__main__":
     app = QApplication([])
