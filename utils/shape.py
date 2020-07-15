@@ -14,3 +14,10 @@ class Shape(object):
         rectHeight = rightBottom.y() - leftTop.y()
         painter.setPen(QColor(0, 255, 0))
         painter.drawRect(leftTop.x(), leftTop.y(), rectWidth, rectHeight)
+
+    def isInShape(self, point):
+        if (self.firstPos.x() <= point.x() <= self.endPos.x()) \
+            and (self.firstPos.y() <= point.y() <= self.endPos.y()):
+            return True
+        else:
+            return False
