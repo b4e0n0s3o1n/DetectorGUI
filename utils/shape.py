@@ -7,6 +7,11 @@ class Shape(object):
         self.firstPos = None
         self.endPos = None
 
+    def size(self):
+        width = self.endPos.x() - self.firstPos.x()
+        height = self.endPos.y() - self.firstPos.y()
+        return (width, height)
+
     def paintRect(self, painter):
         leftTop = self.firstPos
         rightBottom = self.endPos
