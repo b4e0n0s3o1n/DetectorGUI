@@ -254,6 +254,7 @@ class Canvas(QWidget):
 
     def selectShapePoint(self, point):
         """Select the first shape created which contains this point."""
+        self.deselectShape()
         for shape in reversed(self.shapes):
             if shape.isInShape(point):
                 self.selectShape(shape)
@@ -292,8 +293,21 @@ class Canvas(QWidget):
         """Reset flags."""
         self.isDrawing = False
         self.currentShape = None
-        self.selectedShape = None
+        # self.selectedShape = None
         self.update()
+
+    def deleteSelected(self):
+        """Delete the selected shape."""
+        if self.selectedShape:
+            self.shapes.remove(self.selectedShape)
+            self.selectedShape = None
+            self.update()
+
+    def deselectShape(self):
+        """Deselect the shape."""
+        if self.selectedShape:
+            self.selectedShape = None
+            self.update()
 
 if __name__ == "__main__":
     app = QApplication([])
