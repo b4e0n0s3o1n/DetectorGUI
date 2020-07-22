@@ -21,6 +21,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('test')
         # self.setMinimumSize(640, 320)
 
+        # Set variables
+        self.fileName = None
+
         # Create QLabel for showing and drawing image.
         self.img = QPixmap()
         self.canvas = Canvas(parent=self)
@@ -32,6 +35,8 @@ class MainWindow(QMainWindow):
         self.zoominImage_btn.clicked.connect(self.zoomInImageSlot)
         self.zoomoutImage_btn = QPushButton('Zoom out')
         self.zoomoutImage_btn.clicked.connect(self.zoomOutImageSlot)
+        self.outputPosition_btn = QPushButton('Output ROI')
+        self.outputPosition_btn.clicked.connect(self.outputPositionSlot)
 
         # Create scroll area
         scroll = QScrollArea()
@@ -43,8 +48,13 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(self.scrollArea)
         layout.addWidget(self.loadImage_btn)
-        layout.addWidget(self.zoominImage_btn)
-        layout.addWidget(self.zoomoutImage_btn)
+        zoomLayer = QHBoxLayout()
+        zoomLayer.addWidget(self.zoominImage_btn)
+        zoomLayer.addWidget(self.zoomoutImage_btn)
+        zoomWidget = QWidget()
+        zoomWidget.setLayout(zoomLayer)
+        layout.addWidget(zoomWidget)
+        layout.addWidget(self.outputPosition_btn)
 
         # Create central widget of QMainWindow
         windowContainer = QWidget()
@@ -57,10 +67,28 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence('w'), self, self.onDrawing)
         QShortcut(QKeySequence.Delete, self, self.canvas.deleteSelected)
         QShortcut(QKeySequence('d'), self, self.canvas.deleteSelected)
+        QShortcut(QKeySequence('s'), self, self.outputPositionSlot)
 
     def onDrawing(self):
         print('Drawing mode...')
         self.canvas.isDrawing = True
+
+    # TODO: MainWindow resize event
+    def resizeEvent(self, event):
+        """QMainWindow event: MainWindow resize event."""
+        # self.canvas.setMinimumSize(self.scrollArea.width(), self.scrollArea.height())
+
+    def loadImageSlot(self):
+        """Slot of loading image"""
+        file, _ = QFileDialog.getOpenFileName(self, "Open Image", 
+            PATH_FILE, "Image Files (*.png *.jpg *.bmp *.tiff)")
+        print('file path: {}'.format(file))
+
+        self.fileName = os.path.splitext(os.path.basename(file))[0]
+        self.img = QPixmap(file)
+        if self.img:
+            self.canvas.setGeometry(0, 0, self.canvas.width(), self.canvas.height())
+            self.canvas.loadPixmap(self.img)
 
     def zoomInImageSlot(self):
         """Slot of zooming in image."""
@@ -81,22 +109,10 @@ class MainWindow(QMainWindow):
 
         canvas_position = self.canvas.geometry()
         print('Zoom out... Canvas size: {}'.format(canvas_position))
-    
-    # TODO: MainWindow resize event
-    def resizeEvent(self, event):
-        """QMainWindow event: MainWindow resize event."""
-        # self.canvas.setMinimumSize(self.scrollArea.width(), self.scrollArea.height())
 
-    def loadImageSlot(self):
-        """Slot of loading image"""
-        file, _ = QFileDialog.getOpenFileName(self, "Open Image", 
-            PATH_FILE, "Image Files (*.png *.jpg *.bmp *.tiff)")
-        print('file path: {}'.format(file))
-        
-        self.img = QPixmap(file)
-        if self.img:
-            self.canvas.setGeometry(0, 0, self.canvas.width(), self.canvas.height())
-            self.canvas.loadPixmap(self.img)
+    def outputPositionSlot(self):
+        """Output the coordinate of each shape."""
+        self.canvas.outputPosition(self.fileName)
 
 def main():
     app = QtWidgets.QApplication([])

@@ -1,6 +1,7 @@
 # Canvas for showing image and drawing ROIs.
 # Uncomplete
 
+import json
 from PySide2.QtGui import *
 from PySide2.QtCore import *
 from PySide2.QtWidgets import *
@@ -309,6 +310,31 @@ class Canvas(QWidget):
         if self.selectedShape:
             self.selectedShape = None
             self.update()
+
+
+    def outputPosition(self, fileName):
+        """Output coordinate of each shape."""
+        if not self.shapes:
+            return
+        data = {}
+        # Get all information from shape.
+        for i, shape in enumerate(self.shapes):
+            x, y = shape.firstPos.x(), shape.firstPos.y()
+            w = shape.endPos.x() - shape.firstPos.x()
+            h = shape.endPos.y() - shape.firstPos.y()
+            mainKey = 'ROI_{}'.format(i)
+            descripiton = ''
+            position = [x, y, w, h]
+            data[mainKey] = {
+                'description': descripiton,
+                'position': position
+            }
+
+        # Save file.
+        filePath = 'output/{}_ROI.json'.format(fileName)
+        with open(filePath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        print('Saving ROI: {}'.format(filePath))
 
 if __name__ == "__main__":
     app = QApplication([])
