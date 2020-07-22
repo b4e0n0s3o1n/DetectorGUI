@@ -197,6 +197,7 @@ class Canvas(QWidget):
         
         if ev.button() == Qt.LeftButton:
             if self.isDrawing:
+                self.selectedShape = None
                 self.currentShape = Shape()     # Create Shape to save rect info.
                 self.currentShape.firstPos = pos
             else:
