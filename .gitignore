@@ -1,7 +1,8 @@
 __pycache__/
-utils/__pycache__/
 .vscode/
 images/
+output/*
+utils/__pycache__/
 mainwindow.ui
 demo.py
 QtImageViewer.py
