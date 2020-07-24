@@ -311,6 +311,23 @@ class Canvas(QWidget):
             self.selectedShape = None
             self.update()
 
+    def showPosition(self, fileName):
+        # TODO: show roi coordinate
+        """Show coordinate of each shape on the canvas."""
+        with open(fileName, 'r', encoding='UTF-8') as f:
+            roiJson = json.load(f)
+            for i, key in enumerate(roiJson):
+                w, h = roiJson[key]['position'][2], roiJson[key]['position'][3]
+                firstPos = QPoint(roiJson[key]['position'][0], 
+                    roiJson[key]['position'][1])
+                endPos = QPoint(firstPos.x() + w, firstPos.y() + h)
+
+                tempShape = Shape()
+                tempShape.firstPos = firstPos
+                tempShape.endPos = endPos
+                self.shapes.append(tempShape)
+
+                self.repaint()
 
     def outputPosition(self, fileName):
         """Output coordinate of each shape."""
