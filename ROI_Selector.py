@@ -3,7 +3,7 @@ import sys
 import random
 import cv2
 from PySide2 import QtCore, QtWidgets, QtGui
-from PySide2.QtCore import Qt, QMetaObject, QFile, QPoint
+from PySide2.QtCore import *
 from PySide2.QtWidgets import *
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtGui import *
@@ -23,51 +23,81 @@ class MainWindow(QMainWindow):
 
         # Set variables
         self.fileName = None
+        self.jsonFile = None
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.openCamera)
+        self.capture = cv2.VideoCapture(1)
 
         # Create QLabel for showing and drawing image.
         self.img = QPixmap()
         self.canvas = Canvas(parent=self)
 
-        # Create button
+        # Create button.
         self.loadImage_btn = QPushButton('Load image')
-        self.loadImage_btn.clicked.connect(self.loadImageSlot)
+        self.openCamera_btn = QPushButton('Open camera')
+        self.loadRoi_btn = QPushButton('Load ROI')
+        self.savePosition_btn = QPushButton('Save ROI')
+        self.captureImage_btn = QPushButton('Capture Image')
         self.zoominImage_btn = QPushButton('Zoom in')
-        self.zoominImage_btn.clicked.connect(self.zoomInImageSlot)
         self.zoomoutImage_btn = QPushButton('Zoom out')
+        ## Connect slot of button.
+        self.loadImage_btn.clicked.connect(self.loadImageSlot)
+        self.openCamera_btn.clicked.connect(self.openCameraSlot)
+        self.loadRoi_btn.clicked.connect(self.loadRoiSlot)
+        self.savePosition_btn.clicked.connect(self.savePositionSlot)
+        self.captureImage_btn.clicked.connect(self.captureImageSlot)
+        self.zoominImage_btn.clicked.connect(self.zoomInImageSlot)
         self.zoomoutImage_btn.clicked.connect(self.zoomOutImageSlot)
-        self.outputPosition_btn = QPushButton('Output ROI')
-        self.outputPosition_btn.clicked.connect(self.outputPositionSlot)
+        ## size policy of button.
+        self.loadImage_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        self.openCamera_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        self.loadRoi_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        self.savePosition_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        self.captureImage_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        self.zoominImage_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        self.zoomoutImage_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
 
-        # Create scroll area
+        # Create scroll area.
         scroll = QScrollArea()
         scroll.setWidget(self.canvas)
         scroll.setWidgetResizable(True)
         self.scrollArea = scroll
 
-        # Set layout
-        layout = QVBoxLayout()
+        # Set layout.
+        layout = QHBoxLayout()
+        ## Left layer.
+        functionLayer = QVBoxLayout()
+        functionLayer.setSpacing(10)                # Set each widget gap.
+        functionLayer.setMargin(0)                  # Set margin of layer.
+        functionLayer.addWidget(self.loadImage_btn)
+        functionLayer.addWidget(self.openCamera_btn)
+        functionLayer.addWidget(self.captureImage_btn)
+        functionLayer.addWidget(self.loadRoi_btn)
+        functionLayer.addWidget(self.savePosition_btn)
+        functionLayer.addWidget(self.zoominImage_btn)
+        functionLayer.addWidget(self.zoomoutImage_btn)
+        functionWidget = QWidget()
+        functionWidget.setLayout(functionLayer)
+        layout.addWidget(functionWidget)
+        layout.setStretchFactor(functionWidget, 1)      # Set stretching ratio 1 : 10
+        ## Right layer.
         layout.addWidget(self.scrollArea)
-        layout.addWidget(self.loadImage_btn)
-        zoomLayer = QHBoxLayout()
-        zoomLayer.addWidget(self.zoominImage_btn)
-        zoomLayer.addWidget(self.zoomoutImage_btn)
-        zoomWidget = QWidget()
-        zoomWidget.setLayout(zoomLayer)
-        layout.addWidget(zoomWidget)
-        layout.addWidget(self.outputPosition_btn)
+        layout.setStretchFactor(self.scrollArea, 20)
 
         # Create central widget of QMainWindow
         windowContainer = QWidget()
         windowContainer.setLayout(layout)
         self.setCentralWidget(windowContainer)
 
-        # Set shortcuts
+        # Set shortcuts.
         QShortcut(QKeySequence.ZoomIn, self, self.zoomInImageSlot)
         QShortcut(QKeySequence.ZoomOut, self, self.zoomOutImageSlot)
         QShortcut(QKeySequence('w'), self, self.onDrawing)
         QShortcut(QKeySequence.Delete, self, self.canvas.deleteSelected)
         QShortcut(QKeySequence('d'), self, self.canvas.deleteSelected)
-        QShortcut(QKeySequence('s'), self, self.outputPositionSlot)
+        QShortcut(QKeySequence('s'), self, self.savePositionSlot)
+        QShortcut(QKeySequence('o'), self, self.openCameraSlot)
+        QShortcut(QKeySequence('p'), self, self.captureImageSlot)
 
     def onDrawing(self):
         print('Drawing mode...')
@@ -83,43 +113,73 @@ class MainWindow(QMainWindow):
         file, _ = QFileDialog.getOpenFileName(self, "Open Image", 
             PATH_FILE, "Image Files (*.png *.jpg *.bmp *.tiff)")
         print('file path: {}'.format(file))
+        if file:
+            self.fileName = os.path.splitext(os.path.basename(file))[0]
+            self.img = QPixmap(file)
+            if self.img:
+                self.canvas.setGeometry(0, 0, self.canvas.width(), self.canvas.height())
+                self.canvas.loadPixmap(self.img)
 
-        self.fileName = os.path.splitext(os.path.basename(file))[0]
-        self.img = QPixmap(file)
-        if self.img:
-            self.canvas.setGeometry(0, 0, self.canvas.width(), self.canvas.height())
-            self.canvas.loadPixmap(self.img)
+    def openCameraSlot(self):
+        """Slot of Setting timer to start to load frame from the camera."""
+        self.timer.start(30)
+
+    def captureImageSlot(self):
+        """Slot of Setting timer to stop to capture frame."""
+        self.timer.stop()
+
+    def loadRoiSlot(self):
+        """Slot of showing ROI."""
+        print('Show roi.')
+        file, _ = QFileDialog.getOpenFileName(self, "Open ROI", PATH_FILE, "JSON Files (*.json)")
+        print('file path: {}'.format(file))
+        if file:
+            self.jsonFile = file
+            self.canvas.showPosition(self.jsonFile)
 
     def zoomInImageSlot(self):
         """Slot of zooming in image."""
-        value = self.canvas.scale
-        value += 0.1
-        self.canvas.zoom(value)
-        self.canvas.adjustSize()
-
-        canvas_position = self.canvas.geometry()
-        print('Zoom in... Canvas size: {}'.format(canvas_position))
+        if self.img:
+            value = self.canvas.scale
+            value += 0.1
+            self.canvas.zoom(value)
+            self.canvas.adjustSize()
+            canvas_position = self.canvas.geometry()
+            print('Zoom in... Canvas size: {}'.format(canvas_position))
 
     def zoomOutImageSlot(self):
         """Slot of zooming out image."""
-        value = self.canvas.scale
-        value -= 0.1
-        self.canvas.zoom(value)
-        self.canvas.adjustSize()
+        if self.img:
+            value = self.canvas.scale
+            value -= 0.1
+            self.canvas.zoom(value)
+            self.canvas.adjustSize()
+            canvas_position = self.canvas.geometry()
+            print('Zoom out... Canvas size: {}'.format(canvas_position))
 
-        canvas_position = self.canvas.geometry()
-        print('Zoom out... Canvas size: {}'.format(canvas_position))
+    def savePositionSlot(self):
+        """Slot of outputting the coordinate of each shape."""
+        if self.fileName:
+            self.canvas.savePosition(self.fileName)
 
-    def outputPositionSlot(self):
-        """Output the coordinate of each shape."""
-        self.canvas.outputPosition(self.fileName)
+    def openCamera(self):
+        """Open camera to get current frame."""
+        ret, frame = self.capture.read()
+        if ret == False:
+            return
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # frame = cv2.flip(frame, 1)
+        self.img = QPixmap(QImage(frame.data, frame.shape[1], frame.shape[0], 
+            frame.strides[0], QImage.Format_RGB888))
+        if self.img:
+            self.canvas.setGeometry(0, 0, self.canvas.width(), self.canvas.height())
+            self.canvas.loadPixmap(self.img)
 
 def main():
     app = QtWidgets.QApplication([])
     app.addLibraryPath(PATH_FILE)
     
     window = MainWindow()
-    window.loadImageSlot()
     window.show()
     sys.exit(app.exec_())
 
