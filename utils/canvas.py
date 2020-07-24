@@ -329,7 +329,7 @@ class Canvas(QWidget):
 
                 self.repaint()
 
-    def outputPosition(self, fileName):
+    def savePosition(self, fileName):
         """Output coordinate of each shape."""
         if not self.shapes:
             return
