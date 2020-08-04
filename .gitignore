@@ -1,6 +1,8 @@
 __pycache__/
 .vscode/
+bin/
 images/
+model/
 output/*
 utils/__pycache__/
 mainwindow.ui
