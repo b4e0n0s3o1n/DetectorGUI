@@ -18,8 +18,8 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         # Set MainWindow setting
-        self.setWindowTitle('test')
-        # self.setMinimumSize(640, 320)
+        self.setWindowTitle('HMI Prototype')
+        self.resize(QSize(600, 500))
 
         # Set variables
         self.fileName = None
@@ -38,6 +38,7 @@ class MainWindow(QMainWindow):
         self.loadRoi_btn = QPushButton('Load ROI')
         self.savePosition_btn = QPushButton('Save ROI')
         self.captureImage_btn = QPushButton('Capture Image')
+        self.detect_btn = QPushButton('Detect ROI')
         self.zoominImage_btn = QPushButton('Zoom in')
         self.zoomoutImage_btn = QPushButton('Zoom out')
         ## Connect slot of button.
@@ -46,6 +47,7 @@ class MainWindow(QMainWindow):
         self.loadRoi_btn.clicked.connect(self.loadRoiSlot)
         self.savePosition_btn.clicked.connect(self.savePositionSlot)
         self.captureImage_btn.clicked.connect(self.captureImageSlot)
+        self.detect_btn.clicked.connect(self.detectRoiSlot)
         self.zoominImage_btn.clicked.connect(self.zoomInImageSlot)
         self.zoomoutImage_btn.clicked.connect(self.zoomOutImageSlot)
         ## size policy of button.
@@ -54,6 +56,7 @@ class MainWindow(QMainWindow):
         self.loadRoi_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.savePosition_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.captureImage_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        self.detect_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.zoominImage_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.zoomoutImage_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
 
@@ -70,10 +73,11 @@ class MainWindow(QMainWindow):
         functionLayer.setSpacing(10)                # Set each widget gap.
         functionLayer.setMargin(0)                  # Set margin of layer.
         functionLayer.addWidget(self.loadImage_btn)
-        functionLayer.addWidget(self.openCamera_btn)
-        functionLayer.addWidget(self.captureImage_btn)
-        functionLayer.addWidget(self.loadRoi_btn)
         functionLayer.addWidget(self.savePosition_btn)
+        functionLayer.addWidget(self.openCamera_btn)
+        functionLayer.addWidget(self.loadRoi_btn)
+        functionLayer.addWidget(self.captureImage_btn)
+        functionLayer.addWidget(self.detect_btn)
         functionLayer.addWidget(self.zoominImage_btn)
         functionLayer.addWidget(self.zoomoutImage_btn)
         functionWidget = QWidget()
@@ -120,13 +124,14 @@ class MainWindow(QMainWindow):
                 self.canvas.setGeometry(0, 0, self.canvas.width(), self.canvas.height())
                 self.canvas.loadPixmap(self.img)
 
+    def savePositionSlot(self):
+        """Slot of outputting the coordinate of each shape."""
+        if self.fileName:
+            self.canvas.savePosition(self.fileName)
+
     def openCameraSlot(self):
         """Slot of Setting timer to start to load frame from the camera."""
         self.timer.start(30)
-
-    def captureImageSlot(self):
-        """Slot of Setting timer to stop to capture frame."""
-        self.timer.stop()
 
     def loadRoiSlot(self):
         """Slot of showing ROI."""
@@ -136,6 +141,14 @@ class MainWindow(QMainWindow):
         if file:
             self.jsonFile = file
             self.canvas.showPosition(self.jsonFile)
+
+    def captureImageSlot(self):
+        """Slot of Setting timer to stop to capture frame."""
+        self.timer.stop()
+
+    def detectRoiSlot(self):
+        """Slot of detecting digits of ROI."""
+        self.canvas.detectShape()
 
     def zoomInImageSlot(self):
         """Slot of zooming in image."""
@@ -156,11 +169,6 @@ class MainWindow(QMainWindow):
             self.canvas.adjustSize()
             canvas_position = self.canvas.geometry()
             print('Zoom out... Canvas size: {}'.format(canvas_position))
-
-    def savePositionSlot(self):
-        """Slot of outputting the coordinate of each shape."""
-        if self.fileName:
-            self.canvas.savePosition(self.fileName)
 
     def openCamera(self):
         """Open camera to get current frame."""

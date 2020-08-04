@@ -2,11 +2,14 @@
 # Uncomplete
 
 import json
+import cv2
+import numpy as np
 from PySide2.QtGui import *
 from PySide2.QtCore import *
 from PySide2.QtWidgets import *
 
 from utils.shape import Shape
+from utils.aimodel import AiModel
 
 # Cursor icon
 CURSOR_DEFAULT = Qt.ArrowCursor
@@ -33,6 +36,9 @@ class Canvas(QWidget):
         # Set flag
         self._cursor = CURSOR_DEFAULT
         self.isDrawing = False
+
+        # Ai model
+        self.yoloModel = AiModel()
 
     def loadPixmap(self, pixmap):
         """Paint image on QWidget."""
@@ -330,7 +336,7 @@ class Canvas(QWidget):
                 self.repaint()
 
     def savePosition(self, fileName):
-        """Output coordinate of each shape."""
+        """Output coordinate (x, y , w, h) of each shape."""
         if not self.shapes:
             return
         data = {}
@@ -352,6 +358,29 @@ class Canvas(QWidget):
         with open(filePath, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
         print('Saving ROI: {}'.format(filePath))
+
+    def detectShape(self):
+        """Detect all digits in the shapes."""
+        # TODO: detect ROI
+        if (self.pixmap is not None) and (self.shapes):
+            # Convert QImage to np array.
+            img = self.pixmap.toImage()
+            ptr = img.bits().tobytes()
+            npImage = np.frombuffer(ptr, dtype=np.uint8).reshape(
+                (self.pixmap.height(), self.pixmap.width(), 4))
+
+            for i, shape in enumerate(self.shapes):
+                # Get (x, y, w, h) from ROI.
+                x, y = int(shape.firstPos.x()), int(shape.firstPos.y())
+                w = int(shape.endPos.x() - shape.firstPos.x())
+                h = int(shape.endPos.y() - shape.firstPos.y())
+
+                # Crop image and select RGB channel without Alpha
+                cropImage = npImage[y:y + h, x:x + w, 0:3]
+                
+                # Detect digits.
+                shape.digit = self.yoloModel.detectImage(cropImage, isDebug=False)
+            self.repaint()
 
 if __name__ == "__main__":
     app = QApplication([])
