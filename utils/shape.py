@@ -7,6 +7,7 @@ class Shape(object):
         self.firstPos = None
         self.endPos = None
         self.digit = None
+        self.isSelected = False
 
     def size(self):
         width = self.endPos.x() - self.firstPos.x()
@@ -19,8 +20,17 @@ class Shape(object):
         rightBottom = self.endPos
         rectWidth = rightBottom.x() - leftTop.x()
         rectHeight = rightBottom.y() - leftTop.y()
-        painter.setPen(QColor(0, 255, 0))
-        painter.drawRect(leftTop.x(), leftTop.y(), rectWidth, rectHeight)
+        rect = QRect(leftTop.x(), leftTop.y(), rectWidth, rectHeight)
+
+        # Set color of rectangle edge.
+        edgeColor = QColor(0, 128, 255) if self.isSelected else QColor(0, 255, 0)
+        painter.setPen(edgeColor)
+        # Set color of filled rectangle.
+        fillColor = QColor(0, 128, 255, 155) if self.isSelected else QColor(0, 255, 0, 0)
+
+        # Draw rectangle.
+        painter.drawRect(rect)
+        painter.fillRect(rect, fillColor)
 
         # Draw text at the top-left
         if self.digit is not None:

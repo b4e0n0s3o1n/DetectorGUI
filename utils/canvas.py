@@ -270,6 +270,7 @@ class Canvas(QWidget):
 
     def selectShape(self, shape):
         """Select and assign shape."""
+        shape.isSelected = True
         self.selectedShape = shape
         self.update()
 
@@ -308,17 +309,18 @@ class Canvas(QWidget):
         """Delete the selected shape."""
         if self.selectedShape:
             self.shapes.remove(self.selectedShape)
+            self.selectedShape.isSelected = False
             self.selectedShape = None
             self.update()
 
     def deselectShape(self):
         """Deselect the shape."""
         if self.selectedShape:
+            self.selectedShape.isSelected = False
             self.selectedShape = None
             self.update()
 
     def showPosition(self, fileName):
-        # TODO: show roi coordinate
         """Show coordinate of each shape on the canvas."""
         with open(fileName, 'r', encoding='UTF-8') as f:
             roiJson = json.load(f)
@@ -361,7 +363,6 @@ class Canvas(QWidget):
 
     def detectShape(self):
         """Detect all digits in the shapes."""
-        # TODO: detect ROI
         if (self.pixmap is not None) and (self.shapes):
             # Convert QImage to np array.
             img = self.pixmap.toImage()
@@ -381,6 +382,10 @@ class Canvas(QWidget):
                 # Detect digits.
                 shape.digit = self.yoloModel.detectImage(cropImage, isDebug=False)
             self.repaint()
+
+    def unHighlight(self):
+        if self.selectedShape:
+            self.selectedShape.isSelected = False
 
 if __name__ == "__main__":
     app = QApplication([])
