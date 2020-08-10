@@ -105,6 +105,7 @@ class MainWindow(QMainWindow):
 
     def onDrawing(self):
         print('Drawing mode...')
+        self.canvas.unHighlight()
         self.canvas.isDrawing = True
 
     # TODO: MainWindow resize event
