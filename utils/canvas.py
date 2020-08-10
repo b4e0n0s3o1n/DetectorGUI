@@ -226,6 +226,12 @@ class Canvas(QWidget):
                 maxX = max(self.currentShape.firstPos.x(), self.currentShape.endPos.x())
                 minY = min(self.currentShape.firstPos.y(), self.currentShape.endPos.y())
                 maxY = max(self.currentShape.firstPos.y(), self.currentShape.endPos.y())
+
+                # Cannel shape when distance is too small.
+                if self.isTooSmall(minX, maxX, minY, maxY):
+                    self.resetFlags()
+                    return
+
                 self.currentShape.firstPos = QPointF(minX, minY)
                 self.currentShape.endPos = QPointF(maxX, maxY)
                 self.shapes.append(self.currentShape)   # Append to shape list.
@@ -383,9 +389,16 @@ class Canvas(QWidget):
                 shape.digit = self.yoloModel.detectImage(cropImage, isDebug=False)
             self.repaint()
 
-    def unHighlight(self):
+    def unhighlightShape(self):
+        """Unhighlight shape."""
         if self.selectedShape:
             self.selectedShape.isSelected = False
+
+    def isTooSmall(self, x1, x2, y1, y2):
+        """Determine whether the area of shape is too small."""
+        if (x2 - x1 <= 3) or (y2 - y1 <= 3):
+            return True
+        return False
 
 if __name__ == "__main__":
     app = QApplication([])
