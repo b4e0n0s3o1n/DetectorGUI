@@ -8,6 +8,7 @@ class Shape(object):
         self.endPos = None
         self.digit = None
         self.isSelected = False
+        self.description = None
 
     def size(self):
         width = self.endPos.x() - self.firstPos.x()
