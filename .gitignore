@@ -3,7 +3,7 @@ __pycache__/
 bin/
 images/
 model/
-output/*
+roi_info/*
 utils/__pycache__/
 mainwindow.ui
 demo.py

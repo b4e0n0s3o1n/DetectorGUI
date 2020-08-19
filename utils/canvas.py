@@ -11,6 +11,7 @@ from PySide2.QtWidgets import *
 from utils.shape import Shape
 from utils.aimodel import AiModel
 
+
 # Cursor icon
 CURSOR_DEFAULT = Qt.ArrowCursor
 CURSOR_DRAW = Qt.CrossCursor 
@@ -158,7 +159,6 @@ class Canvas(QWidget):
     def mouseMoveEvent(self, ev):
         """QWidget event: Mouse move evnet"""
         pos = self.transformPos(ev.pos())
-
         if self.isDrawing:
             self.overrideCursor(CURSOR_DRAW)
             if self.currentShape:
@@ -347,25 +347,28 @@ class Canvas(QWidget):
         """Output coordinate (x, y , w, h) of each shape."""
         if not self.shapes:
             return
-        data = {}
-        # Get all information from shape.
-        for i, shape in enumerate(self.shapes):
-            x, y = shape.firstPos.x(), shape.firstPos.y()
-            w = shape.endPos.x() - shape.firstPos.x()
-            h = shape.endPos.y() - shape.firstPos.y()
-            mainKey = 'ROI_{}'.format(i)
-            descripiton = ''
-            position = [x, y, w, h]
-            data[mainKey] = {
-                'description': descripiton,
-                'position': position
-            }
 
-        # Save file.
-        filePath = 'output/{}_ROI.json'.format(fileName)
-        with open(filePath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-        print('Saving ROI: {}'.format(filePath))
+        # Show saving dialog to set storage path.
+        savedName, _ = QFileDialog.getSaveFileName(self, 'Save ROIs', fileName + '.json', 'JSON Files (*.json)')
+        if savedName:
+            data = {}
+            # Get all information from shape.
+            for i, shape in enumerate(self.shapes):
+                x, y = shape.firstPos.x(), shape.firstPos.y()
+                w = shape.endPos.x() - shape.firstPos.x()
+                h = shape.endPos.y() - shape.firstPos.y()
+                mainKey = 'ROI_{}'.format(i)
+                descripiton = ''
+                position = [x, y, w, h]
+                data[mainKey] = {
+                    'description': descripiton,
+                    'position': position
+                }
+
+            # Save file.
+            with open(savedName, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            print('Saving ROI: {}'.format(savedName))
 
     def detectShape(self):
         """Detect all digits in the shapes."""
