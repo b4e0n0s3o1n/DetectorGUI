@@ -10,7 +10,7 @@ from PySide2.QtWidgets import *
 
 from utils.shape import Shape
 from utils.aimodel import AiModel
-
+from utils.roiDialog import ROIDialog
 
 # Cursor icon
 CURSOR_DEFAULT = Qt.ArrowCursor
@@ -29,6 +29,7 @@ class Canvas(QWidget):
         self.currentShape = None    # Current selected shape.
         self.selectedShape = None   # Select shape if mouse left button click.
         self.prevPoint = QPointF()  # Save first point when mouse click on the shape.
+        self.roiDialog = None       # Dialog of entering description of ROI.
 
         # Set widget options.
         self.setMouseTracking(True)
@@ -221,22 +222,33 @@ class Canvas(QWidget):
 
         elif ev.button() == Qt.LeftButton:
             if self.isDrawing:
-                # Adjust rect point if self.firstPos isn's leftTop etc.
-                minX = min(self.currentShape.firstPos.x(), self.currentShape.endPos.x())
-                maxX = max(self.currentShape.firstPos.x(), self.currentShape.endPos.x())
-                minY = min(self.currentShape.firstPos.y(), self.currentShape.endPos.y())
-                maxY = max(self.currentShape.firstPos.y(), self.currentShape.endPos.y())
+                # Dialog of entering description of ROI.
+                self.roiDialog = ROIDialog(parent=self)
+                roiDescription = self.roiDialog.popUp(text='')
 
-                # Cannel shape when distance is too small.
-                if self.isTooSmall(minX, maxX, minY, maxY):
+                if roiDescription is not None:
+                    # Adjust rect point if self.firstPos isn's leftTop etc.
+                    minX = min(self.currentShape.firstPos.x(), self.currentShape.endPos.x())
+                    maxX = max(self.currentShape.firstPos.x(), self.currentShape.endPos.x())
+                    minY = min(self.currentShape.firstPos.y(), self.currentShape.endPos.y())
+                    maxY = max(self.currentShape.firstPos.y(), self.currentShape.endPos.y())
+
+                    # Cannel shape when distance is too small.
+                    if self.isTooSmall(minX, maxX, minY, maxY):
+                        self.resetFlags()
+                        return
+
+                    self.currentShape.firstPos = QPointF(minX, minY)
+                    self.currentShape.endPos = QPointF(maxX, maxY)
+                    self.currentShape.description = roiDescription
+                    self.shapes.append(self.currentShape)   # Append to shape list.
+                    self.restoreCursor()
                     self.resetFlags()
-                    return
+                else:
+                    # Cancel drawn ROI.
+                    self.currentShape = None
+                    self.resetFlags()
 
-                self.currentShape.firstPos = QPointF(minX, minY)
-                self.currentShape.endPos = QPointF(maxX, maxY)
-                self.shapes.append(self.currentShape)   # Append to shape list.
-                self.restoreCursor()
-                self.resetFlags()
 
     def enterEvent(self, ev):
         """QWidget event: When cursor enters QWidget."""
@@ -358,7 +370,7 @@ class Canvas(QWidget):
                 w = shape.endPos.x() - shape.firstPos.x()
                 h = shape.endPos.y() - shape.firstPos.y()
                 mainKey = 'ROI_{}'.format(i)
-                descripiton = ''
+                descripiton = shape.description
                 position = [x, y, w, h]
                 data[mainKey] = {
                     'description': descripiton,
