@@ -8,7 +8,9 @@ class Shape(object):
         self.endPos = None
         self.digit = None
         self.isSelected = False
-        self.description = None
+        self.machineName = None
+        self.frameName = None
+        self.roiName = None
 
     def size(self):
         width = self.endPos.x() - self.firstPos.x()
@@ -34,7 +36,7 @@ class Shape(object):
         painter.fillRect(rect, fillColor)
 
         # Draw text at the top-left
-        if self.digit is not None:
+        if self.roiName is not None:
             textX = self.firstPos.x()
             textY = self.firstPos.y() - 2
             if textY < 10:      # If position is too top.
@@ -42,7 +44,9 @@ class Shape(object):
             font = QFont()
             font.setPointSize(8)
             painter.setFont(font)
-            painter.drawText(textX, textY, str(self.digit))
+            text = str(self.roiName) if self.digit is None \
+                else str(self.roiName) + ': ' + str(self.digit)
+            painter.drawText(textX, textY, text)
             
     def isInShape(self, point):
         if (self.firstPos.x() <= point.x() <= self.endPos.x()) \

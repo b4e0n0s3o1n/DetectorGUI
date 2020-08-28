@@ -19,6 +19,8 @@ CURSOR_GRAB = Qt.OpenHandCursor
 CURSOR_MOVE = Qt.ClosedHandCursor
 
 class Canvas(QWidget):
+    writeToDB = Signal(list)
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -224,9 +226,9 @@ class Canvas(QWidget):
             if self.isDrawing:
                 # Dialog of entering description of ROI.
                 self.roiDialog = ROIDialog(parent=self)
-                roiDescription = self.roiDialog.popUp(text='')
+                machineName, frameName, roiName = self.roiDialog.popUp(text='')
 
-                if roiDescription is not None:
+                if None not in [machineName, frameName, roiName]:
                     # Adjust rect point if self.firstPos isn's leftTop etc.
                     minX = min(self.currentShape.firstPos.x(), self.currentShape.endPos.x())
                     maxX = max(self.currentShape.firstPos.x(), self.currentShape.endPos.x())
@@ -238,10 +240,14 @@ class Canvas(QWidget):
                         self.resetFlags()
                         return
 
+                    # Record ROI informatino.
                     self.currentShape.firstPos = QPointF(minX, minY)
                     self.currentShape.endPos = QPointF(maxX, maxY)
-                    self.currentShape.description = roiDescription
-                    self.shapes.append(self.currentShape)   # Append to shape list.
+                    self.currentShape.machineName = machineName
+                    self.currentShape.frameName = frameName
+                    self.currentShape.roiName = roiName
+                    # Append to shape list.
+                    self.shapes.append(self.currentShape)
                     self.restoreCursor()
                     self.resetFlags()
                 else:
@@ -320,7 +326,7 @@ class Canvas(QWidget):
         """Reset flags."""
         self.isDrawing = False
         self.currentShape = None
-        # self.selectedShape = None
+        self.roiDialog = None
         self.update()
 
     def deleteSelected(self):
@@ -370,12 +376,20 @@ class Canvas(QWidget):
                 w = shape.endPos.x() - shape.firstPos.x()
                 h = shape.endPos.y() - shape.firstPos.y()
                 mainKey = 'ROI_{}'.format(i)
-                descripiton = shape.description
+                machineName = shape.machineName
+                frameName = shape.frameName
+                roiName = shape.roiName
                 position = [x, y, w, h]
                 data[mainKey] = {
-                    'description': descripiton,
+                    'machineName': machineName,
+                    'frameName': frameName,
+                    'roiName': descripiton,
                     'position': position
                 }
+
+                # Write to DB.
+                info = [machineName, frameName, descripiton, x, y, w, h]
+                self.writeToDB.emit(info)
 
             # Save file.
             with open(savedName, 'w', encoding='utf-8') as f:
