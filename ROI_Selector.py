@@ -2,6 +2,7 @@ import os
 import sys
 import random
 import cv2
+import pymysql
 from PySide2 import QtCore, QtWidgets, QtGui
 from PySide2.QtCore import *
 from PySide2.QtWidgets import *
@@ -9,6 +10,7 @@ from PySide2.QtUiTools import QUiLoader
 from PySide2.QtGui import *
 
 from utils.canvas import Canvas
+from utils.struct import *
 
 QtCore.QCoreApplication.addLibraryPath(os.path.join(os.path.dirname(QtCore.__file__), "plugins"))
 PATH_FILE = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +30,7 @@ class MainWindow(QMainWindow):
         self.timer.timeout.connect(self.openCamera)
         self.capture = cv2.VideoCapture(1)
 
-        # Create QLabel for showing and drawing image.
+        # Create canvas for showing and drawing image.
         self.img = QPixmap()
         self.canvas = Canvas(parent=self)
 
@@ -50,6 +52,7 @@ class MainWindow(QMainWindow):
         self.detect_btn.clicked.connect(self.detectRoiSlot)
         self.zoominImage_btn.clicked.connect(self.zoomInImageSlot)
         self.zoomoutImage_btn.clicked.connect(self.zoomOutImageSlot)
+        self.canvas.writeToDB.connect(self.insertDB)
         ## size policy of button.
         self.loadImage_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.openCamera_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
@@ -94,14 +97,20 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(windowContainer)
 
         # Set shortcuts.
-        QShortcut(QKeySequence.ZoomIn, self, self.zoomInImageSlot)
-        QShortcut(QKeySequence.ZoomOut, self, self.zoomOutImageSlot)
-        QShortcut(QKeySequence('w'), self, self.onDrawing)
-        QShortcut(QKeySequence.Delete, self, self.canvas.deleteSelected)
-        QShortcut(QKeySequence('d'), self, self.canvas.deleteSelected)
-        QShortcut(QKeySequence('s'), self, self.savePositionSlot)
-        QShortcut(QKeySequence('o'), self, self.openCameraSlot)
-        QShortcut(QKeySequence('p'), self, self.captureImageSlot)
+        zoomIn = QShortcut(QKeySequence.ZoomIn, self, self.zoomInImageSlot)
+        zoomOut = QShortcut(QKeySequence.ZoomOut, self, self.zoomOutImageSlot)
+        drawing = QShortcut(QKeySequence('w'), self, self.onDrawing)
+        delete = QShortcut(QKeySequence.Delete, self, self.canvas.deleteSelected)
+        deleteKey = QShortcut(QKeySequence('d'), self, self.canvas.deleteSelected)
+        saveROI = QShortcut(QKeySequence('s'), self, self.savePositionSlot)
+        openCamera = QShortcut(QKeySequence('o'), self, self.openCameraSlot)
+        pauseCamera = QShortcut(QKeySequence('p'), self, self.captureImageSlot)
+        allActions = (zoomIn, zoomOut, drawing, delete, deleteKey, saveROI, openCamera, pauseCamera)
+        for action in allActions:
+            action.setEnabled(False)
+        self.actions = struct(zoomIn=zoomIn, zoomOut=zoomOut, drawing=drawing, 
+            delete=delete, deleteKey=deleteKey, saveROI=saveROI, 
+            openCamera=open, pauseCamera=pauseCamera, allActions=allActions)
 
     def onDrawing(self):
         print('Drawing mode...')
@@ -124,6 +133,9 @@ class MainWindow(QMainWindow):
             if self.img:
                 self.canvas.setGeometry(0, 0, self.canvas.width(), self.canvas.height())
                 self.canvas.loadPixmap(self.img)
+
+                for action in self.actions.allActions:
+                    action.setEnabled(True)
 
     def savePositionSlot(self):
         """Slot of outputting the coordinate of each shape."""
@@ -183,6 +195,28 @@ class MainWindow(QMainWindow):
         if self.img:
             self.canvas.setGeometry(0, 0, self.canvas.width(), self.canvas.height())
             self.canvas.loadPixmap(self.img)
+
+    def insertDB(self, info):
+        """Insert information to DB."""
+        host = '127.0.0.1'
+        user = 'root'
+        pw = '12345678'
+        db = 'sunstige_hmi_data'
+        table = 'roi_info'
+
+        conn = pymysql.connect(host, user, pw, db)
+        cursor = conn.cursor()
+        sql = "INSERT INTO `roi_info` \
+            (`machineName`, `frameName`, `roiName`, `x`, `y`, `w`, `h`) \
+            VALUES (%s, %s, %s, %s, %s, %s, %s)"
+
+        try:
+            cursor.execute(sql, info)
+            conn.commit()
+        except Exce5ption as e:
+            print(e)
+        finally:
+            conn.close()
 
 def main():
     app = QtWidgets.QApplication([])
