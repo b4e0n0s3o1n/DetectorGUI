@@ -124,6 +124,12 @@ class MainWindow(QMainWindow):
 
     def loadImageSlot(self):
         """Slot of loading image"""
+        # Ask Y/N before loading image when shape is created.
+        if self.canvas.shapes:
+            if not self.discardChangesDialog():
+                return
+            self.canvas.shapes = []
+
         file, _ = QFileDialog.getOpenFileName(self, "Open Image", 
             PATH_FILE, "Image Files (*.png *.jpg *.bmp *.tiff)")
         print('file path: {}'.format(file))
@@ -217,6 +223,12 @@ class MainWindow(QMainWindow):
             print(e)
         finally:
             conn.close()
+
+    def discardChangesDialog(self):
+        """Ask whether to discard all shapes."""
+        yes, no = QMessageBox.Yes, QMessageBox.No
+        msg = u'You have unsaved changes, proceed anyway?'
+        return yes == QMessageBox.warning(self, 'Attention', msg, yes | no)
 
 def main():
     app = QtWidgets.QApplication([])
