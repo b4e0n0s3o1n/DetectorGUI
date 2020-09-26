@@ -86,10 +86,12 @@ class MainWindow(QMainWindow):
         functionWidget = QWidget()
         functionWidget.setLayout(functionLayer)
         layout.addWidget(functionWidget)
-        layout.setStretchFactor(functionWidget, 1)      # Set stretching ratio 1 : 10
         ## Right layer.
         layout.addWidget(self.scrollArea)
         layout.setStretchFactor(self.scrollArea, 20)
+        ## Set stretching ratio of layout.
+        layout.setStretchFactor(functionWidget, 1)      # Set stretching ratio 1:9
+        layout.setStretchFactor(self.scrollArea, 9)
 
         # Create central widget of QMainWindow
         windowContainer = QWidget()
