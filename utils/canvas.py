@@ -383,12 +383,12 @@ class Canvas(QWidget):
                 data[mainKey] = {
                     'machineName': machineName,
                     'frameName': frameName,
-                    'roiName': descripiton,
+                    'roiName': roiName,
                     'position': position
                 }
 
                 # Write to DB.
-                info = [machineName, frameName, descripiton, x, y, w, h]
+                info = [machineName, frameName, roiName, x, y, w, h]
                 self.writeToDB.emit(info)
 
             # Save file.
