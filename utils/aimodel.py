@@ -6,13 +6,14 @@ import cv2
 from utils import darknet
 
 class AiModel():
-    def __init__(self):
+    def __init__(self, config, weight, meta):
         self.digitList = []
 
         # YOLO model
         self.netMain = None
         self.metaMain = None
         self.darknet_image  = None
+        self.model_size = None
 
         # Path
         self.yoloConfig = None
@@ -20,15 +21,14 @@ class AiModel():
         self.yoloMeta = None
 
         # Initial class
-        self.startUp()
+        self.startUp(config, weight, meta)
 
-    def startUp(self):
+    def startUp(self, config, weight, meta):
         """Preload setting and model."""
         CWD_PATH = os.getcwd()
-        # Get path.
-        self.yoloConfig = os.path.join(CWD_PATH, 'model', 'yolov4-first_hmi.cfg')
-        self.yoloWeight = os.path.join(CWD_PATH, 'model', 'yolov4-first_hmi_best.weights')
-        self.yoloMeta = os.path.join(CWD_PATH, 'model', 'first_hmi.data')
+        self.yoloConfig = config
+        self.yoloWeight = weight
+        self.yoloMeta = meta
 
         # Load model
         self.netMain, self.metaMain, self.darknet_image = self.get_yolo_model(
@@ -53,6 +53,10 @@ class AiModel():
         self.metaMain = darknet.load_meta(metaPath.encode("ascii"))
 
         # Create an image of darknet.
+        self.model_size = (
+            darknet.network_width(self.netMain), 
+            darknet.network_height(self.netMain)
+        )
         self.darknet_image = darknet.make_image(darknet.network_width(self.netMain), 
             darknet.network_height(self.netMain), 3)
         return self.netMain, self.metaMain, self.darknet_image
@@ -113,6 +117,59 @@ class AiModel():
                         (pt1[0], pt1[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         [0, 255, 0], 2)
         return img
+
+    def detectROI(self, imgList, isDebug=False):
+        """Detect ROI from HMI."""
+        detections = []
+        for img in imgList:
+            # Resize image before YOLO.
+            resized_img = cv2.resize(img, 
+                (darknet.network_width(self.netMain), 
+                darknet.network_height(self.netMain)), 
+                interpolation=cv2.INTER_LINEAR)
+            
+            # Convert to the type of darknet image.
+            darknet.copy_image_from_bytes(self.darknet_image, resized_img.tobytes())
+
+            # Detect bbox
+            detections = darknet.detect_image(
+                self.netMain, self.metaMain, self.darknet_image, thresh=0.5)
+
+            if isDebug:
+                outputImg = self.cvDrawBoxes(detections, resized_img)
+                cv2.namedWindow('Debug', cv2.WINDOW_NORMAL)
+                cv2.imshow('Debug', outputImg)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+        return detections
+    
+    def detectDigit(self, img, isDebug=False):
+        """Detect digit."""
+        # Resize image before YOLO.
+        resized_img = cv2.resize(img, 
+            (darknet.network_width(self.netMain), 
+            darknet.network_height(self.netMain)), 
+            interpolation=cv2.INTER_LINEAR)
+        
+        # Convert to the type of darknet image.
+        darknet.copy_image_from_bytes(self.darknet_image, resized_img.tobytes())
+
+        # Detect bbox
+        detections = darknet.detect_image(
+            self.netMain, self.metaMain, self.darknet_image, thresh=0.25)
+        detections.sort(key=lambda x: x[2][0])  # sorted by X axis
+
+        # Convert detected list to number.
+        num = self.convert_to_num(detections, isDebug)
+
+        if isDebug:
+            print('Num: {}'.format(num))
+            outputImg = self.cvDrawBoxes(detections, resized_img)
+            cv2.namedWindow('Debug', cv2.WINDOW_NORMAL)
+            cv2.imshow('Debug', outputImg)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+        return num
 
     def detectImages(self, imgList, isDebug=False):
         """Detect image from image list."""

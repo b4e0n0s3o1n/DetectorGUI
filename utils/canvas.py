@@ -2,8 +2,9 @@
 # Uncomplete
 
 import json
-import cv2
+import time
 import numpy as np
+
 from PySide2.QtGui import *
 from PySide2.QtCore import *
 from PySide2.QtWidgets import *
@@ -42,7 +43,16 @@ class Canvas(QWidget):
         self.isDrawing = False
 
         # Ai model
-        self.yoloModel = AiModel()
+        self.ROIDetector = AiModel(
+            'model/yolov4-hmi_roi_2.cfg',
+            'model/yolov4-hmi_roi_2_3000.weights',
+            'model/hmi_roi.data'
+        )
+        self.digitDetector = AiModel(
+            'model/yolov4-first_hmi.cfg',
+            'model/yolov4-first_hmi_best.weights',
+            'model/first_hmi.data'
+        )
 
     def loadPixmap(self, pixmap):
         """Paint image on QWidget."""
@@ -158,6 +168,8 @@ class Canvas(QWidget):
                 self.zoom(value)
                 self.adjustSize()
         ev.accept()
+
+        self.position = (800, 600)
 
     def mouseMoveEvent(self, ev):
         """QWidget event: Mouse move evnet"""
@@ -399,13 +411,33 @@ class Canvas(QWidget):
 
     def detectShape(self):
         """Detect all digits in the shapes."""
-        # TODO: Implement two-stage detection.
-        if (self.pixmap is not None) and (self.shapes):
+        if (self.pixmap is not None) :#and (self.shapes):
             # Convert QImage to np array.
+            print('Start detecting: {}'.format(time.perf_counter()))
             img = self.pixmap.toImage()
             ptr = img.bits().tobytes()
             npImage = np.frombuffer(ptr, dtype=np.uint8).reshape(
                 (self.pixmap.height(), self.pixmap.width(), 4))
+
+            # Implement two-stage detection.
+            detections = self.ROIDetector.detectROI([npImage[:, :, 0:3]], isDebug=False)
+            for i, detection in enumerate(detections):
+                coordinate = detection[2]
+                xmin, ymin, xmax, ymax = self.convertCoordinate(
+                    list(coordinate), 
+                    self.ROIDetector.model_size,
+                    (npImage.shape[1], npImage.shape[0])
+                )
+
+                temp_shape = Shape()
+                # Record ROI informatino.
+                temp_shape.firstPos = QPointF(xmin, ymin)
+                temp_shape.endPos = QPointF(xmax, ymax)
+                temp_shape.machineName = str(i)
+                temp_shape.frameName = str(i)
+                temp_shape.roiName = str(i)
+                # Append to shape list.
+                self.shapes.append(temp_shape)
 
             for i, shape in enumerate(self.shapes):
                 # Get (x, y, w, h) from ROI.
@@ -417,8 +449,26 @@ class Canvas(QWidget):
                 cropImage = npImage[y:y + h, x:x + w, 0:3]
                 
                 # Detect digits.
-                shape.digit = self.yoloModel.detectImage(cropImage, isDebug=False)
+                shape.digit = self.digitDetector.detectDigit(cropImage, isDebug=False)
+            print('End detecting: {}'.format(time.perf_counter()))
             self.repaint()
+
+    def convertCoordinate(self, detection, ori_size, resize_size):
+        """Convert coordinate from ori_size to resize_size then return xmin, ymin, xmax, ymax."""
+        ow, oh = ori_size[0], ori_size[1]
+        rw, rh = resize_size[0], resize_size[1]
+        x, y, w, h = detection[0], detection[1], detection[2], detection[3]
+
+        x = x * rw / ow
+        y = y * rh / oh
+        w = w * rw / ow
+        h = h * rh / oh
+        
+        xmin = int(round(x - (w / 2)))
+        xmax = int(round(x + (w / 2)))
+        ymin = int(round(y - (h / 2)))
+        ymax = int(round(y + (h / 2)))
+        return xmin, ymin, xmax, ymax
 
     def unhighlightShape(self):
         """Unhighlight shape."""
