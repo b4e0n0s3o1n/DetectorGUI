@@ -1,12 +1,11 @@
 import os
 import sys
-import random
 import cv2
 import pymysql
-from PySide2 import QtCore, QtWidgets, QtGui
+
+from PySide2 import QtCore
 from PySide2.QtCore import *
 from PySide2.QtWidgets import *
-from PySide2.QtUiTools import QUiLoader
 from PySide2.QtGui import *
 
 from utils.canvas import Canvas
@@ -221,7 +220,7 @@ class MainWindow(QMainWindow):
         try:
             cursor.execute(sql, info)
             conn.commit()
-        except Exce5ption as e:
+        except Exception as e:
             print(e)
         finally:
             conn.close()
@@ -233,7 +232,7 @@ class MainWindow(QMainWindow):
         return yes == QMessageBox.warning(self, 'Attention', msg, yes | no)
 
 def main():
-    app = QtWidgets.QApplication([])
+    app = QApplication([])
     app.addLibraryPath(PATH_FILE)
     
     window = MainWindow()
