@@ -38,6 +38,7 @@ class MainWindow(QMainWindow):
         self.openCamera_btn = QPushButton('Open camera')
         self.loadRoi_btn = QPushButton('Load ROI')
         self.savePosition_btn = QPushButton('Save ROI')
+        self.cleanROI_btn = QPushButton('Clean ROIs')
         self.captureImage_btn = QPushButton('Capture Image')
         self.detect_btn = QPushButton('Detect ROI')
         self.zoominImage_btn = QPushButton('Zoom in')
@@ -47,6 +48,7 @@ class MainWindow(QMainWindow):
         self.openCamera_btn.clicked.connect(self.openCameraSlot)
         self.loadRoi_btn.clicked.connect(self.loadRoiSlot)
         self.savePosition_btn.clicked.connect(self.savePositionSlot)
+        self.cleanROI_btn.clicked.connect(self.cleanRoiSlot)
         self.captureImage_btn.clicked.connect(self.captureImageSlot)
         self.detect_btn.clicked.connect(self.detectRoiSlot)
         self.zoominImage_btn.clicked.connect(self.zoomInImageSlot)
@@ -57,6 +59,7 @@ class MainWindow(QMainWindow):
         self.openCamera_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.loadRoi_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.savePosition_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        self.cleanROI_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.captureImage_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.detect_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.zoominImage_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
@@ -75,9 +78,10 @@ class MainWindow(QMainWindow):
         functionLayer.setSpacing(10)                # Set each widget gap.
         functionLayer.setMargin(0)                  # Set margin of layer.
         functionLayer.addWidget(self.loadImage_btn)
-        functionLayer.addWidget(self.savePosition_btn)
-        functionLayer.addWidget(self.openCamera_btn)
         functionLayer.addWidget(self.loadRoi_btn)
+        functionLayer.addWidget(self.savePosition_btn)
+        functionLayer.addWidget(self.cleanROI_btn)
+        functionLayer.addWidget(self.openCamera_btn)
         functionLayer.addWidget(self.captureImage_btn)
         functionLayer.addWidget(self.detect_btn)
         functionLayer.addWidget(self.zoominImage_btn)
@@ -148,6 +152,11 @@ class MainWindow(QMainWindow):
         """Slot of outputting the coordinate of each shape."""
         if self.fileName:
             self.canvas.savePosition(self.fileName)
+
+    def cleanRoiSlot(self):
+        """Clean all ROI."""
+        self.canvas.shapes = []
+        self.canvas.repaint()
 
     def openCameraSlot(self):
         """Slot of Setting timer to start to load frame from the camera."""

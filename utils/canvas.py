@@ -346,6 +346,7 @@ class Canvas(QWidget):
 
     def showPosition(self, fileName):
         """Show coordinate of each shape on the canvas."""
+        self.shapes = []
         with open(fileName, 'r', encoding='UTF-8') as f:
             roiJson = json.load(f)
             for i, key in enumerate(roiJson):
@@ -398,6 +399,7 @@ class Canvas(QWidget):
 
     def detectShape(self):
         """Detect all digits in the shapes."""
+        # TODO: Implement two-stage detection.
         if (self.pixmap is not None) and (self.shapes):
             # Convert QImage to np array.
             img = self.pixmap.toImage()
