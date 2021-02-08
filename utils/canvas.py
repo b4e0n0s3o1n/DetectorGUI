@@ -21,6 +21,7 @@ CURSOR_MOVE = Qt.ClosedHandCursor
 
 class Canvas(QWidget):
     writeToDB = Signal(list)
+    zoomRequest = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -45,13 +46,13 @@ class Canvas(QWidget):
         # Ai model
         self.ROIDetector = AiModel(
             'model/yolov4-hmi_roi_2.cfg',
-            'model/yolov4-hmi_roi_2_3000.weights',
+            'model/yolov4-hmi_roi_2_8000_1027.weights',
             'model/hmi_roi.data'
         )
         self.digitDetector = AiModel(
-            'model/yolov4-first_hmi.cfg',
-            'model/yolov4-first_hmi_best.weights',
-            'model/first_hmi.data'
+            'model/yolov4-digits.cfg',
+            'model/yolov4-digits_best.weights',
+            'model/digit.data'
         )
 
     def loadPixmap(self, pixmap):
@@ -420,6 +421,7 @@ class Canvas(QWidget):
                 (self.pixmap.height(), self.pixmap.width(), 4))
 
             # Implement two-stage detection.
+            # Detect ROIs.
             detections = self.ROIDetector.detectROI([npImage[:, :, 0:3]], isDebug=False)
             for i, detection in enumerate(detections):
                 coordinate = detection[2]
@@ -430,7 +432,7 @@ class Canvas(QWidget):
                 )
 
                 temp_shape = Shape()
-                # Record ROI informatino.
+                # Record ROI information.
                 temp_shape.firstPos = QPointF(xmin, ymin)
                 temp_shape.endPos = QPointF(xmax, ymax)
                 temp_shape.machineName = str(i)
@@ -439,6 +441,7 @@ class Canvas(QWidget):
                 # Append to shape list.
                 self.shapes.append(temp_shape)
 
+            # Detect digit by all ROIs.
             for i, shape in enumerate(self.shapes):
                 # Get (x, y, w, h) from ROI.
                 x, y = int(shape.firstPos.x()), int(shape.firstPos.y())

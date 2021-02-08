@@ -10,8 +10,8 @@ class AiModel():
         self.digitList = []
 
         # YOLO model
-        self.netMain = None
-        self.metaMain = None
+        self.network = None
+        self.class_names = None
         self.darknet_image  = None
         self.model_size = None
 
@@ -31,7 +31,7 @@ class AiModel():
         self.yoloMeta = meta
 
         # Load model
-        self.netMain, self.metaMain, self.darknet_image = self.get_yolo_model(
+        self.network, self.class_names, self.darknet_image = self.get_yolo_model(
             self.yoloConfig, self.yoloWeight, self.yoloMeta)
 
     def get_yolo_model(self, configPath, weightPath, metaPath):
@@ -48,18 +48,19 @@ class AiModel():
                             os.path.abspath(metaPath)+"`")
 
         # Load YOLO model & class names on first run.\
-        self.netMain = darknet.load_net_custom(configPath.encode(
-            "ascii"), weightPath.encode("ascii"), 0, 1)  # batch size = 1
-        self.metaMain = darknet.load_meta(metaPath.encode("ascii"))
+        self.network, self.class_names, class_colors = darknet.load_network(configPath,  metaPath, weightPath, batch_size=1)
+        # self.network = darknet.load_net_custom(configPath.encode(
+        #     "ascii"), weightPath.encode("ascii"), 0, 1)  # batch size = 1
+        # self.class_names = darknet.load_meta(metaPath.encode("ascii"))
 
         # Create an image of darknet.
         self.model_size = (
-            darknet.network_width(self.netMain), 
-            darknet.network_height(self.netMain)
+            darknet.network_width(self.network), 
+            darknet.network_height(self.network)
         )
-        self.darknet_image = darknet.make_image(darknet.network_width(self.netMain), 
-            darknet.network_height(self.netMain), 3)
-        return self.netMain, self.metaMain, self.darknet_image
+        self.darknet_image = darknet.make_image(darknet.network_width(self.network), 
+            darknet.network_height(self.network), 3)
+        return self.network, self.class_names, self.darknet_image
 
     def convert_to_num(self, detections, isDebug=False):
         """Convert list to number."""
@@ -69,17 +70,17 @@ class AiModel():
         
         # Calculate how many ditigs in this image.
         digit = len(category_list) - 1
-        if b'10' in category_list:
-            digit = category_list.index(b'10') - 1
-            category_list.remove(b'10')
-        if b'11' in category_list:
-            category_list.remove(b'11')
+        if '10' in category_list:
+            digit = category_list.index('10') - 1
+            category_list.remove('10')
+        if '11' in category_list:
+            category_list.remove('11')
             digit -= 1
             isNegative = True
         
         # Calculate number.
         for category in category_list:
-            if (category != b'10') or (category != b'11'):
+            if (category != '10') or (category != '11'):
                 num += int(category) * 10 ** digit
                 digit -= 1
 
@@ -87,9 +88,9 @@ class AiModel():
             print('Number: {}'.format(num))
             for detection in detections:
                 print('Class: {:2d}  Score:{:.4f} || '.format(
-                    int(detection[0]), detection[1]), end='')
+                    int(detection[0]), float(detection[1])), end='')
             print('\n')
-        return num
+        return round(num, 3)
 
     def convertBack(self, x, y, w, h):
         """Convert back to the original coordinates of cv2.rectangle."""
@@ -112,8 +113,8 @@ class AiModel():
             pt2 = (xmax, ymax)
             cv2.rectangle(img, pt1, pt2, (0, 255, 0), 1)
             cv2.putText(img,
-                        detection[0].decode() +
-                        " [" + str(round(detection[1] * 100, 2)) + "]",
+                        detection[0] +
+                        " [" + str(round(float(detection[1]) * 100, 2)) + "]",
                         (pt1[0], pt1[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         [0, 255, 0], 2)
         return img
@@ -124,16 +125,23 @@ class AiModel():
         for img in imgList:
             # Resize image before YOLO.
             resized_img = cv2.resize(img, 
-                (darknet.network_width(self.netMain), 
-                darknet.network_height(self.netMain)), 
+                (darknet.network_width(self.network), 
+                darknet.network_height(self.network)), 
                 interpolation=cv2.INTER_LINEAR)
             
             # Convert to the type of darknet image.
             darknet.copy_image_from_bytes(self.darknet_image, resized_img.tobytes())
 
             # Detect bbox
-            detections = darknet.detect_image(
-                self.netMain, self.metaMain, self.darknet_image, thresh=0.5)
+            detections = darknet.detect_image(self.network, self.class_names, self.darknet_image, thresh=0.5)
+            # detections = darknet.detect_image(
+            #     self.network, self.class_names, self.darknet_image, thresh=0.5)
+            # TODO: sort by x -> y.
+            detections.sort(key=lambda x: x[2][1])  # sorted by Y axis
+            # try:
+            #     self.sortCoordinate(detections, darknet.network_width(self.network), darknet.network_height(self.network))
+            # except Exception as e:
+            #     pass
 
             if isDebug:
                 outputImg = self.cvDrawBoxes(detections, resized_img)
@@ -147,16 +155,17 @@ class AiModel():
         """Detect digit."""
         # Resize image before YOLO.
         resized_img = cv2.resize(img, 
-            (darknet.network_width(self.netMain), 
-            darknet.network_height(self.netMain)), 
+            (darknet.network_width(self.network), 
+            darknet.network_height(self.network)), 
             interpolation=cv2.INTER_LINEAR)
         
         # Convert to the type of darknet image.
         darknet.copy_image_from_bytes(self.darknet_image, resized_img.tobytes())
 
         # Detect bbox
-        detections = darknet.detect_image(
-            self.netMain, self.metaMain, self.darknet_image, thresh=0.25)
+        detections = darknet.detect_image(self.network, self.class_names, self.darknet_image, thresh=0.7)
+        # detections = darknet.detect_image(
+        #     self.network, self.class_names, self.darknet_image, thresh=0.7)
         detections.sort(key=lambda x: x[2][0])  # sorted by X axis
 
         # Convert detected list to number.
@@ -176,8 +185,8 @@ class AiModel():
         for img in imgList:
             # Resize image before YOLO.
             resized_img = cv2.resize(img, 
-                (darknet.network_width(self.netMain), 
-                darknet.network_height(self.netMain)), 
+                (darknet.network_width(self.network), 
+                darknet.network_height(self.network)), 
                 interpolation=cv2.INTER_LINEAR)
             
             # Convert to the type of darknet image.
@@ -185,7 +194,7 @@ class AiModel():
 
             # Detect bbox
             detections = darknet.detect_image(
-                self.netMain, self.metaMain, self.darknet_image, thresh=0.25)
+                self.network, self.class_names, self.darknet_image, thresh=0.25)
             detections.sort(key=lambda x: x[2][0])  # sorted by X axis
 
             # Convert detected list to number.
@@ -204,15 +213,15 @@ class AiModel():
         """Detect image from single image."""
         # Resize image before YOLO.
         resized_img = cv2.resize(img, 
-            (darknet.network_width(self.netMain), 
-            darknet.network_height(self.netMain)), 
+            (darknet.network_width(self.network), 
+            darknet.network_height(self.network)), 
             interpolation=cv2.INTER_LINEAR)
 
         # Convert to the type of darknet image.
         darknet.copy_image_from_bytes(self.darknet_image, resized_img.tobytes())
 
         # Detect bbox
-        detections = darknet.detect_image(self.netMain, self.metaMain, 
+        detections = darknet.detect_image(self.network, self.class_names, 
             self.darknet_image, thresh=0.25)
         detections.sort(key=lambda x: x[2][0])  # sorted by X axis
 
@@ -227,3 +236,16 @@ class AiModel():
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         return num
+
+    def sortCoordinate(self, detections, width, height):
+        start = 0
+        temp = []
+        for detection in detections:
+            for coordinate in detection[2]:
+                y = coordinate[1]
+                if (start <= y <= start + 10):
+                    temp.append(detection)
+        print(temp)
+        # for y in range(0, height - 10, 10):
+        #     temp_list = [val for val in detection[2] if val >= y and val <= y + 10]
+        #     print(temp_list)
