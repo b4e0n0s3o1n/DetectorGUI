@@ -70,6 +70,11 @@ class MainWindow(QMainWindow):
         scroll.setWidget(self.canvas)
         scroll.setWidgetResizable(True)
         self.scrollArea = scroll
+        self.scrollBars = {
+            Qt.Vertical: scroll.verticalScrollBar(),
+            Qt.Horizontal: scroll.horizontalScrollBar()
+        }
+        self.canvas.scrollRequest.connect(self.scrollRequest)
 
         # Set layout.
         layout = QHBoxLayout()
@@ -239,6 +244,11 @@ class MainWindow(QMainWindow):
         yes, no = QMessageBox.Yes, QMessageBox.No
         msg = u'You have unsaved changes, proceed anyway?'
         return yes == QMessageBox.warning(self, 'Attention', msg, yes | no)
+
+    def scrollRequest(self, delta, orientation):
+        units = - delta / (8 * 15)
+        bar = self.scrollBars[orientation]
+        bar.setValue(bar.value() + bar.singleStep() * units)
 
 def main():
     app = QApplication([])

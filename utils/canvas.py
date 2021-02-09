@@ -22,6 +22,7 @@ CURSOR_MOVE = Qt.ClosedHandCursor
 class Canvas(QWidget):
     writeToDB = Signal(list)
     zoomRequest = Signal(int)
+    scrollRequest = Signal(int, int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -152,6 +153,7 @@ class Canvas(QWidget):
     def wheelEvent(self, ev):
         """QWidget event: Scroll wheel event of zooming in or out"""
         delta = ev.angleDelta()
+        h_delta = delta.x()
         v_delta = delta.y()
         mods = int(ev.modifiers())
 
@@ -168,6 +170,9 @@ class Canvas(QWidget):
                 value -= 0.1
                 self.zoom(value)
                 self.adjustSize()
+        else:
+            v_delta and self.scrollRequest.emit(v_delta, Qt.Vertical)
+            h_delta and self.scrollRequest.emit(h_delta, Qt.Horizontal)
         ev.accept()
 
         self.position = (800, 600)
