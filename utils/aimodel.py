@@ -134,14 +134,9 @@ class AiModel():
 
             # Detect bbox
             detections = darknet.detect_image(self.network, self.class_names, self.darknet_image, thresh=0.5)
-            # detections = darknet.detect_image(
-            #     self.network, self.class_names, self.darknet_image, thresh=0.5)
-            # TODO: sort by x -> y.
+            # sort by x -> y.
             detections.sort(key=lambda x: x[2][1])  # sorted by Y axis
-            # try:
-            #     self.sortCoordinate(detections, darknet.network_width(self.network), darknet.network_height(self.network))
-            # except Exception as e:
-            #     pass
+            detections = self.sortCoordinate(detections, darknet.network_width(self.network), darknet.network_height(self.network))
 
             if isDebug:
                 outputImg = self.cvDrawBoxes(detections, resized_img)
@@ -238,14 +233,23 @@ class AiModel():
         return num
 
     def sortCoordinate(self, detections, width, height):
-        start = 0
-        temp = []
-        for detection in detections:
-            for coordinate in detection[2]:
-                y = coordinate[1]
-                if (start <= y <= start + 10):
-                    temp.append(detection)
-        print(temp)
-        # for y in range(0, height - 10, 10):
-        #     temp_list = [val for val in detection[2] if val >= y and val <= y + 10]
-        #     print(temp_list)
+        sortList = []
+        unSortList = [detections[0]]     # Append first list.
+
+        for index in range(1, len(detections)):
+            # Get diff of y
+            diffY = detections[index][2][1] - detections[index - 1][2][1]
+
+            if diffY < 10:
+                # Append to unSortList
+                unSortList.append(detections[index])
+            else:
+                # Sort unSortList by x then extend to sortList.
+                unSortList.sort(key=lambda k: k[2][0])
+                sortList.extend(unSortList)
+                unSortList = [detections[index]]
+
+                # Append last list
+                if index == len(detections) - 1:
+                    sortList.append(detections[index])
+        return sortList
