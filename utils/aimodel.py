@@ -114,7 +114,7 @@ class AiModel():
             cv2.rectangle(img, pt1, pt2, (0, 255, 0), 1)
             cv2.putText(img,
                         detection[0] +
-                        " [" + str(round(float(detection[1]) * 100, 2)) + "]",
+                        " [" + str(round(float(detection[1]), 2)) + "]",
                         (pt1[0], pt1[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         [0, 255, 0], 2)
         return img
@@ -135,8 +135,8 @@ class AiModel():
             # Detect bbox
             detections = darknet.detect_image(self.network, self.class_names, self.darknet_image, thresh=0.5)
             # sort by x -> y.
-            detections.sort(key=lambda x: x[2][1])  # sorted by Y axis
-            detections = self.sortCoordinate(detections, darknet.network_width(self.network), darknet.network_height(self.network))
+            # detections.sort(key=lambda x: x[2][1])  # sorted by Y axis
+            # detections = self.sortCoordinate(detections, darknet.network_width(self.network), darknet.network_height(self.network))
 
             if isDebug:
                 outputImg = self.cvDrawBoxes(detections, resized_img)
