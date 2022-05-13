@@ -50,6 +50,13 @@ class Canvas(QWidget):
             'model/yolov4-hmi_roi_2_8000_1027.weights',
             'model/hmi_roi.data'
         )
+
+        # self.ROIDetector = AiModel(
+        #     'model/yolov4_test01.cfg',
+        #     'model/yolov4_test01_best.weights',
+        #     'model/test01.data'
+        # )
+
         self.digitDetector = AiModel(
             'model/yolov4-digits.cfg',
             'model/yolov4-digits_best.weights',
